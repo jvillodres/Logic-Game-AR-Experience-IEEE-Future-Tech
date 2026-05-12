@@ -1,6 +1,6 @@
 # 🚀 La Misión Espacial — AR Educational Game
 
-Juego educativo de Realidad Aumentada que enseña **compuertas lógicas** (AND, OR, NOT)
+Juego educativo de Realidad Aumentada que enseña **lógica computacional**
 a niños a través de una aventura espacial.
 
 ---
@@ -36,7 +36,7 @@ space-mission-ar/
 │       └── logic-helper.js         ← Controlador: diagrama de compuertas
 │
 └── assets/
-    ├── models/                     ← Modelos 3D (.glb) — agregar tus assets aquí
+    ├── models/                     ← Modelos 3D (.glb)
     │   ├── spaceship.glb
     │   ├── battery.glb
     │   ├── astronaut.glb
@@ -48,7 +48,7 @@ space-mission-ar/
     │   └── music/                  ← Música ambiental
     └── images/
         ├── ui/                     ← Iconos del HUD
-        └── markers/                ← Marcadores AR (si usas AR.js marker-based)
+        └── markers/                ← Marcadores AR
 ```
 
 ---
@@ -80,44 +80,6 @@ http://localhost:8080/#level4
 
 ---
 
-## 🔭 Integrar AR real
-
-### Opción A — AR.js (marker-based, más simple)
-
-```html
-<!-- En index.html, añadir antes de cerrar </head> -->
-<script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-```
-
-```html
-<!-- En cada level HTML, reemplazar #ar-viewport con: -->
-<a-scene embedded arjs='sourceType: webcam; debugUIEnabled: false;'>
-  <a-marker preset="hiro">
-    <a-entity gltf-model="#battery-model" battery-pickup position="0.3 0 0"></a-entity>
-    <a-entity gltf-model="#ship-model"    and-gate-logic  position="0 0 0"></a-entity>
-  </a-marker>
-  <a-entity camera></a-entity>
-</a-scene>
-```
-
-### Opción B — MindAR (sin marcadores, recomendado para niños)
-
-```bash
-npm install mind-ar
-```
-
-```html
-<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
-<a-scene mindar-image="imageTargetSrc: assets/markers/targets.mind; autoStart: true;">
-  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-  <a-entity mindar-image-target="targetIndex: 0">
-    <!-- tus modelos 3D aquí -->
-  </a-entity>
-</a-scene>
-```
-
----
 
 ## 📡 Comunicación entre componentes A-Frame y HUD
 
