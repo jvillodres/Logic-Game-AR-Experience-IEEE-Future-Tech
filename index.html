@@ -32,22 +32,59 @@
   -->
   <div id="level-mount"></div>
 
-  <script>
-    // Minimal hash router — swap out for a proper router in production
+   <script>
     const routes = {
       '#level1': 'src/levels/level1-and.html',
       '#level2': 'src/levels/level2-or.html',
       '#level3': 'src/levels/level3-not.html',
       '#level4': 'src/levels/level4-combined.html',
     };
-
+ 
+    /**
+     * innerHTML silently drops <script> tags — the browser won't execute them.
+     * This helper re-creates each script as a real DOM element so they run.
+     */
+    function injectHTML(container, html) {
+      // 1. Wipe previous level (stops old timers via their own cleanup if any)
+      container.innerHTML = '';
+ 
+      // 2. Parse the incoming HTML string
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+ 
+      // 3. Clone every node from <body> into the container
+      //    For <script> nodes we must create a fresh element — cloneNode won't execute them
+      Array.from(doc.body.childNodes).forEach(node => {
+        if (node.nodeName === 'SCRIPT') {
+          const s = document.createElement('script');
+          // Copy attributes (type, src, defer, etc.)
+          Array.from(node.attributes).forEach(a => s.setAttribute(a.name, a.value));
+          s.textContent = node.textContent;
+          container.appendChild(s);         // ← this triggers execution
+        } else {
+          container.appendChild(document.importNode(node, true));
+        }
+      });
+ 
+      // 4. Also pull any <style> blocks from <head> (level-local CSS)
+      Array.from(doc.head.querySelectorAll('style')).forEach(node => {
+        const s = document.createElement('style');
+        s.textContent = node.textContent;
+        container.appendChild(s);
+      });
+    }
+ 
     async function navigate(hash) {
       const path = routes[hash] || routes['#level1'];
-      const res  = await fetch(path);
-      const html = await res.text();
-      document.getElementById('level-mount').innerHTML = html;
+      try {
+        const res  = await fetch(path);
+        if (!res.ok) throw new Error(`HTTP ${res.status} loading ${path}`);
+        const html = await res.text();
+        injectHTML(document.getElementById('level-mount'), html);
+      } catch (err) {
+        console.error('[Router]', err);
+      }
     }
-
+ 
     window.addEventListener('hashchange', () => navigate(location.hash));
     navigate(location.hash || '#level1');
   </script>
