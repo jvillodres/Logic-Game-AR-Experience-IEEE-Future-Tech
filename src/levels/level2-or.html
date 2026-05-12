@@ -1,0 +1,264 @@
+<!--
+  src/levels/level2-or.html
+  ─────────────────────────────────────────────────────────────
+  Nivel 2 · Cruzar el espacio hacia un planeta — Compuerta OR
+
+  El jugador elige entre dos rutas (agujeros de gusano):
+    • Ruta directa  — más corta, más obstáculos (meteoritos, basura espacial)
+    • Ruta segura   — más larga, menos obstáculos (campos magnéticos)
+
+  Lógica OR: basta con que UNA de las dos rutas sea completada
+  para que el jugador llegue al planeta.
+  ──────────────────────────────────────────────────────────── -->
+
+<div id="ar-viewport">
+  <div id="stars"></div>
+  <div id="scene-container">
+    <div class="space-bg"></div>
+
+    <!-- Wormhole left (direct route) -->
+    <div class="wormhole wormhole--direct" id="wormhole-direct"
+         onclick="Level2.selectRoute('direct')"
+         title="Ruta directa — ¡muchos obstáculos!">
+      <svg viewBox="0 0 120 120" fill="none">
+        <circle cx="60" cy="60" r="55" stroke="#00ff88" stroke-width="3"
+                stroke-dasharray="8 4" opacity="0.8"/>
+        <circle cx="60" cy="60" r="38" fill="rgba(0,255,136,0.08)"
+                stroke="#00ff88" stroke-width="2"/>
+        <circle cx="60" cy="60" r="20" fill="rgba(0,255,136,0.15)"/>
+        <text x="60" y="65" text-anchor="middle"
+              font-size="11" fill="#00ff88" font-family="monospace">DIRECTA</text>
+      </svg>
+    </div>
+
+    <!-- Wormhole right (safe route) -->
+    <div class="wormhole wormhole--safe" id="wormhole-safe"
+         onclick="Level2.selectRoute('safe')"
+         title="Ruta segura — más larga pero tranquila">
+      <svg viewBox="0 0 120 120" fill="none">
+        <circle cx="60" cy="60" r="55" stroke="#4ab8ff" stroke-width="3"
+                stroke-dasharray="8 4" opacity="0.8"/>
+        <circle cx="60" cy="60" r="38" fill="rgba(74,184,255,0.08)"
+                stroke="#4ab8ff" stroke-width="2"/>
+        <circle cx="60" cy="60" r="20" fill="rgba(74,184,255,0.15)"/>
+        <text x="60" y="65" text-anchor="middle"
+              font-size="11" fill="#4ab8ff" font-family="monospace">SEGURA</text>
+      </svg>
+    </div>
+
+    <!-- Planet (destination) -->
+    <div class="destination-planet"></div>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="top-bar" class="hud-panel">
+    <div class="world-label">🚀 Mundo 1 · La Misión Espacial</div>
+    <div class="level-label">Nivel 2: Cruzar el espacio</div>
+    <div class="mission-box">
+      <div class="mission-title">Misión · Paso actual:</div>
+      <div class="mission-step" id="current-step">Selecciona una ruta para llegar al planeta</div>
+    </div>
+  </div>
+
+  <div id="timer" class="hud-panel">3:00</div>
+
+  <div id="inventory" class="hud-panel">
+    <div class="inv-label">Inventario</div>
+  </div>
+
+  <!-- OR gate diagram -->
+  <div id="logic-hint" class="hud-panel">
+    <div class="hint-label">Ayuda lógica · OR</div>
+    <div class="gate-diagram">
+      <div class="gate-input">
+        <div class="gate-chip" id="chip-direct" title="Ruta directa">🟢</div>
+        <div class="gate-chip" id="chip-safe"   title="Ruta segura">🔵</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+        <div class="connector" id="conn-top"></div>
+        <div class="connector" id="conn-bot"></div>
+      </div>
+      <div class="gate-and" style="border-color:#ffaa00;color:#ffaa00">OR</div>
+      <div class="gate-arrow">→</div>
+      <div class="gate-output" id="gate-out">🏆</div>
+    </div>
+  </div>
+</div>
+
+<!-- Route selection panel -->
+<div id="control-panel">
+  <div class="route-card" onclick="Level2.selectRoute('direct')">
+    <div style="font-size:28px">🟢</div>
+    <div class="ctrl-label">Ruta<br>Directa</div>
+    <div style="font-size:10px;color:#ff8844;margin-top:4px">⚠ Difícil</div>
+  </div>
+  <div class="route-card" onclick="Level2.selectRoute('safe')">
+    <div style="font-size:28px">🔵</div>
+    <div class="ctrl-label">Ruta<br>Segura</div>
+    <div style="font-size:10px;color:#44cc88;margin-top:4px">✓ Fácil</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="step-msg">
+  <div class="msg-icon" id="msg-icon">💡</div>
+  <div class="msg-text" id="msg-text"></div>
+  <div class="msg-sub"  id="msg-sub"></div>
+</div>
+
+<div id="win-screen">
+  <div style="font-size:60px">🏆✨</div>
+  <div class="win-title">¡NIVEL COMPLETADO!</div>
+  <div class="win-sub">Llegaste al planeta del tesoro</div>
+  <div class="win-logic">
+    <strong>Compuerta OR:</strong><br>
+    Con elegir <em>cualquiera</em> de las dos rutas,<br>
+    la condición se cumple. ¡Eso es una compuerta OR!<br><br>
+    <small style="color:#888">
+      OR = verdadero si AL MENOS UNA entrada es verdadera.
+    </small>
+  </div>
+  <button class="next-btn" onclick="Level2.nextLevel()">
+    Nivel 3 → Láser de protección
+  </button>
+</div>
+
+<style>
+  #scene-container {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .wormhole {
+    position: absolute;
+    width: 130px; height: 130px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    animation: worm-pulse 2.5s ease-in-out infinite;
+  }
+
+  .wormhole:hover { transform: scale(1.12); }
+  .wormhole--direct { left: 22%; top: 28%; }
+  .wormhole--safe   { right: 20%; top: 32%; }
+
+  @keyframes worm-pulse {
+    0%, 100% { filter: brightness(1); }
+    50%       { filter: brightness(1.3) drop-shadow(0 0 12px currentColor); }
+  }
+
+  .destination-planet {
+    position: absolute;
+    top: 10%; left: 50%;
+    transform: translateX(-50%);
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #aa88ff, #440088);
+    box-shadow: 0 0 30px rgba(150,80,255,0.5);
+  }
+
+  .route-card {
+    pointer-events: all;
+    width: 110px; height: 110px;
+    border-radius: 16px;
+    border: 2px solid rgba(80,180,255,0.4);
+    background: rgba(0,15,40,0.9);
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+
+  .route-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(80,180,255,0.9);
+  }
+
+  #control-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0; height: 160px;
+    background: linear-gradient(180deg, rgba(0,5,20,0) 0%, rgba(0,10,35,0.97) 25%);
+    display: flex; align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 20px; gap: 20px;
+    z-index: 200;
+  }
+</style>
+
+<script>
+const Level2 = (() => {
+
+  function _createStars() {
+    const c = document.getElementById('stars');
+    if (!c) return;
+    for (let i = 0; i < 180; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = Math.random() * 2.5 + 0.5;
+      s.style.cssText = `width:${size}px;height:${size}px;
+        top:${Math.random()*100}%;left:${Math.random()*100}%;
+        --d:${(Math.random()*3+1.5).toFixed(1)}s;
+        animation-delay:${(Math.random()*3).toFixed(1)}s;
+        opacity:${Math.random()*0.5+0.1};`;
+      c.appendChild(s);
+    }
+  }
+
+  function selectRoute(route) {
+    const chipId = route === 'direct' ? 'chip-direct' : 'chip-safe';
+    document.getElementById(chipId)?.classList.add('active');
+    document.getElementById('conn-top')?.classList.add('lit');
+    document.getElementById('gate-out')?.classList.add('active');
+
+    const msg = route === 'direct'
+      ? '🟢 Ruta directa seleccionada. ¡Esquiva los meteoritos!'
+      : '🔵 Ruta segura seleccionada. ¡Mantén el rumbo!';
+
+    HUD.showToast(msg);
+
+    // Simplified: selecting any route completes the level
+    // In the full game this would launch the obstacle sub-scene
+    setTimeout(() => {
+      Timer.stop();
+      HUD.showWinScreen();
+      const completed = GameState.get('completedLevels');
+      if (!completed.includes(2)) GameState.set('completedLevels', [...completed, 2]);
+    }, 1500);
+  }
+
+  function nextLevel() {
+    GameState.resetLevel();
+    location.hash = '#level3';
+  }
+
+  function init() {
+    GameState.resetLevel();
+    _createStars();
+    HUD.init();
+    Inventory.init();
+
+    // Override timer to 3 min for this level
+    Timer.start(180,
+      (label, rem) => {
+        const t = document.getElementById('timer');
+        if (t) { t.textContent = label; t.className = rem <= 30 ? 'hud-panel urgent' : 'hud-panel'; }
+      },
+      () => { HUD.showMessage('⏰','¡Se acabó el tiempo!','Inténtalo de nuevo'); setTimeout(()=>location.reload(),3000); }
+    );
+
+    setTimeout(() => {
+      HUD.showMessage('🌀',
+        'Dos agujeros de gusano detectados',
+        'Elige uno — cualquiera llega al planeta (OR)',
+        3500);
+    }, 800);
+  }
+
+  return { init, selectRoute, nextLevel };
+})();
+
+Level2.init();
+</script>

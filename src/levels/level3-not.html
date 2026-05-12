@@ -1,0 +1,282 @@
+<!--
+  src/levels/level3-not.html
+  ─────────────────────────────────────────────────────────────
+  Nivel 3 · Láser de protección — Compuerta NOT
+
+  La nave dispara un rayo láser constantemente (estado = ACTIVO).
+  El jugador MANTIENE PRESIONADO un botón para DESACTIVARLO (NOT).
+  Debe desactivarlo cuando pasen otras naves para no destruirlas.
+
+  NOT truth table:
+    Botón presionado = 1  →  Láser = 0  (apagado)
+    Botón suelto     = 0  →  Láser = 1  (activo)
+  ──────────────────────────────────────────────────────────── -->
+
+<div id="ar-viewport">
+  <div id="stars"></div>
+  <div id="scene-container">
+    <!-- Laser beam from ship -->
+    <div id="laser-beam" class="laser-active"></div>
+    <!-- Friendly ships that cross the screen -->
+    <div id="friendly-ships"></div>
+    <!-- Meteorites in background -->
+    <div id="meteorites"></div>
+  </div>
+</div>
+
+<div id="hud">
+  <div id="top-bar" class="hud-panel">
+    <div class="world-label">🚀 Mundo 1 · La Misión Espacial</div>
+    <div class="level-label">Nivel 3: Láser de protección</div>
+    <div class="mission-box">
+      <div class="mission-title">Misión · Paso actual:</div>
+      <div class="mission-step" id="current-step">Evita destruir las naves aliadas</div>
+    </div>
+  </div>
+  <div id="timer" class="hud-panel">1:30</div>
+  <div id="inventory" class="hud-panel"><div class="inv-label">Inventario</div></div>
+
+  <!-- NOT gate diagram -->
+  <div id="logic-hint" class="hud-panel">
+    <div class="hint-label">Ayuda lógica · NOT</div>
+    <div style="font-size:12px;color:#cce8ff;line-height:1.8">
+      🔴 Láser <span id="laser-status" style="color:#ff4444;font-weight:bold">ACTIVO</span><br>
+      <span style="color:#888;font-size:10px">
+        Mantén presionado el botón para desactivar
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Laser control button -->
+<div id="control-panel">
+  <button class="ctrl-btn" id="btn-laser"
+          onpointerdown="Level3.laserOff()"
+          onpointerup="Level3.laserOn()"
+          onpointerleave="Level3.laserOn()">
+    <div class="ctrl-icon">⛔</div>
+    <div class="ctrl-label">MANTÉN<br>DESACTIVAR<br>LÁSER</div>
+  </button>
+</div>
+
+<div id="toast"></div>
+<div id="step-msg">
+  <div class="msg-icon" id="msg-icon">💡</div>
+  <div class="msg-text" id="msg-text"></div>
+  <div class="msg-sub"  id="msg-sub"></div>
+</div>
+
+<!-- Pet unlock notification -->
+<div id="pet-unlock" style="
+  display:none; position:fixed; top:20px; right:20px;
+  background:rgba(0,15,40,0.95); border:1px solid #ffcc00;
+  border-radius:14px; padding:16px 20px; text-align:center;
+  z-index:350; animation:fadeIn 0.5s ease;">
+  <div style="font-size:36px">🐶</div>
+  <div style="color:#ffcc00;font-weight:bold;font-size:13px">¡MASCOTA DESBLOQUEADA!</div>
+  <div style="color:#fff;font-size:12px;margin-top:4px">ASTRO · Compañero leal</div>
+</div>
+
+<div id="win-screen">
+  <div style="font-size:60px">🐶✨</div>
+  <div class="win-title">¡NIVEL COMPLETADO!</div>
+  <div class="win-sub">¡Astro se une a tu tripulación!</div>
+  <div class="win-logic">
+    <strong>Compuerta NOT:</strong><br>
+    Botón presionado → Láser APAGADO<br>
+    Botón suelto → Láser ENCENDIDO<br><br>
+    <small style="color:#888">NOT invierte la señal. Si algo es verdadero, NOT lo hace falso, ¡y viceversa!</small>
+  </div>
+  <button class="next-btn" onclick="Level3.nextLevel()">
+    Nivel 4 → Isla de los Dragones
+  </button>
+</div>
+
+<style>
+  #scene-container {
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+
+  #laser-beam {
+    position:absolute;
+    left:50%; top:0;
+    width:4px; height:100%;
+    background:linear-gradient(180deg,
+      transparent 0%, rgba(0,180,255,0.8) 40%, #00aaff 60%, transparent 100%);
+    transform:translateX(-50%);
+    transition:opacity 0.1s;
+    box-shadow: 0 0 12px #00aaff, 0 0 30px rgba(0,170,255,0.5);
+  }
+
+  #laser-beam.off { opacity:0; }
+  #laser-beam.laser-active { opacity:1; }
+
+  .friendly-ship {
+    position:absolute;
+    font-size:32px;
+    animation:cross-screen 4s linear forwards;
+  }
+
+  @keyframes cross-screen {
+    from { left:-80px; }
+    to   { left:110%; }
+  }
+
+  .friendly-ship.destroyed {
+    animation-play-state:paused;
+    filter:brightness(3);
+  }
+
+  #control-panel {
+    position:fixed;
+    bottom:0;left:0;right:0;height:160px;
+    background:linear-gradient(180deg,rgba(0,5,20,0) 0%,rgba(0,10,35,0.97) 25%);
+    display:flex;align-items:flex-end;justify-content:center;
+    padding-bottom:20px;gap:20px;z-index:200;
+  }
+
+  #btn-laser {
+    width:140px;height:100px;
+    border-color:rgba(255,60,60,0.6);
+  }
+
+  #btn-laser:active, #btn-laser.off-state {
+    border-color:#7fffb2;
+    background:rgba(0,40,20,0.9);
+  }
+
+  @keyframes fadeIn { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+</style>
+
+<script>
+const Level3 = (() => {
+
+  let _laserActive = true;
+  let _score = 0;
+  let _misses = 0;
+  const MAX_MISSES = 3;
+  const SHIPS_NEEDED = 5;
+  let _shipsSpawned = 0;
+  let _spawnInterval;
+
+  function laserOn() {
+    _laserActive = true;
+    document.getElementById('laser-beam').className = 'laser-active';
+    document.getElementById('laser-status').textContent = 'ACTIVO';
+    document.getElementById('laser-status').style.color = '#ff4444';
+    document.getElementById('btn-laser').classList.remove('off-state');
+    HUD.showToast('🔴 Láser ACTIVO — suelta solo cuando no haya naves aliadas');
+  }
+
+  function laserOff() {
+    _laserActive = false;
+    document.getElementById('laser-beam').className = 'off';
+    document.getElementById('laser-status').textContent = 'DESACTIVADO';
+    document.getElementById('laser-status').style.color = '#7fffb2';
+    document.getElementById('btn-laser').classList.add('off-state');
+  }
+
+  function _spawnFriendlyShip() {
+    if (_shipsSpawned >= SHIPS_NEEDED) { clearInterval(_spawnInterval); return; }
+    _shipsSpawned++;
+
+    const ship = document.createElement('div');
+    ship.className = 'friendly-ship';
+    ship.textContent = ['🚀','🛸','🛩️'][Math.floor(Math.random()*3)];
+    ship.style.top = (20 + Math.random() * 60) + '%';
+
+    const container = document.getElementById('friendly-ships');
+    container.appendChild(ship);
+
+    // Check laser collision at midpoint
+    setTimeout(() => {
+      if (_laserActive) {
+        // Ship destroyed!
+        _misses++;
+        ship.classList.add('destroyed');
+        HUD.showToast(`💥 ¡Nave aliada destruida! (${_misses}/${MAX_MISSES} fallos)`);
+        if (_misses >= MAX_MISSES) {
+          Timer.stop(); clearInterval(_spawnInterval);
+          HUD.showMessage('💥','¡Demasiados fallos!','Inténtalo de nuevo');
+          setTimeout(()=>location.reload(), 2500);
+        }
+      } else {
+        _score++;
+        HUD.showToast(`✅ ¡Nave aliada a salvo! (${_score}/${SHIPS_NEEDED})`);
+        if (_score >= SHIPS_NEEDED) _complete();
+      }
+      setTimeout(() => ship.remove(), 2000);
+    }, 2000);
+  }
+
+  function _complete() {
+    clearInterval(_spawnInterval);
+    Timer.stop();
+
+    // Unlock pet
+    const pets = GameState.get('unlockedPets');
+    if (!pets.includes('astro-dog')) {
+      GameState.set('unlockedPets', [...pets, 'astro-dog']);
+    }
+
+    document.getElementById('pet-unlock').style.display = 'block';
+    setTimeout(() => HUD.showWinScreen(), 2000);
+
+    const completed = GameState.get('completedLevels');
+    if (!completed.includes(3)) GameState.set('completedLevels', [...completed, 3]);
+  }
+
+  function nextLevel() {
+    GameState.resetLevel();
+    location.hash = '#level4';
+  }
+
+  function _createStars() {
+    const c = document.getElementById('stars');
+    if (!c) return;
+    for (let i = 0; i < 200; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = Math.random() * 2.5 + 0.5;
+      s.style.cssText = `width:${size}px;height:${size}px;
+        top:${Math.random()*100}%;left:${Math.random()*100}%;
+        --d:${(Math.random()*3+1.5).toFixed(1)}s;
+        animation-delay:${(Math.random()*3).toFixed(1)}s;
+        opacity:${Math.random()*0.5+0.1};`;
+      c.appendChild(s);
+    }
+  }
+
+  function init() {
+    GameState.resetLevel();
+    _createStars();
+    HUD.init();
+    Inventory.init();
+
+    Timer.start(90,
+      (label, rem) => {
+        const t = document.getElementById('timer');
+        if (t) { t.textContent = label; t.className = rem <= 20 ? 'hud-panel urgent' : 'hud-panel'; }
+      },
+      () => { HUD.showMessage('⏰','¡Tiempo!','Inténtalo de nuevo'); setTimeout(()=>location.reload(),2500); }
+    );
+
+    setTimeout(() => {
+      HUD.showMessage('⚡',
+        'Tu láser está siempre encendido.',
+        'Mantenlo apagado cuando pasen naves aliadas (NOT)',
+        3500);
+    }, 800);
+
+    // Spawn friendly ships every 5s
+    _spawnInterval = setInterval(_spawnFriendlyShip, 5000);
+    setTimeout(_spawnFriendlyShip, 2000); // first one fast
+  }
+
+  return { init, laserOn, laserOff, nextLevel };
+})();
+
+Level3.init();
+</script>

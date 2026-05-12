@@ -1,0 +1,412 @@
+<!--
+  src/levels/level1-and.html
+  ─────────────────────────────────────────────────────────────────
+  Nivel 1 · Encender el motor de la nave espacial — Compuerta AND
+
+  This file is loaded by index.html into #level-mount.
+  It contains:
+    1. The AR viewport (simulated planet surface for now)
+    2. The HUD overlay (panels, inventory, logic diagram)
+    3. The control panel (appears at step 3)
+    4. Feedback elements (toast, step-msg, win-screen)
+    5. Inline <script> wiring everything together for this level
+
+  When you integrate A-Frame + AR.js, replace #ar-viewport with
+  an <a-scene arjs> block and attach the battery-pickup and
+  and-gate-logic components to the relevant entities.
+  ──────────────────────────────────────────────────────────────── -->
+
+<!-- ═══ AR VIEWPORT (replace with <a-scene arjs> for real AR) ═══ -->
+<div id="ar-viewport">
+  <div id="stars"></div>
+
+  <div id="scene-container">
+    <!-- Mars-like planet surface -->
+    <div class="planet"></div>
+
+    <!-- Spaceship (broken) -->
+    <div id="spaceship" title="Nave dañada">
+      <svg class="ship-svg" viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="60" cy="75" rx="28" ry="55" fill="#7a8fa8"/>
+        <ellipse cx="60" cy="55" rx="20" ry="35" fill="#9ab4cc"/>
+        <ellipse cx="60" cy="55" rx="12" ry="18" fill="#1a3a5c" opacity="0.9"/>
+        <ellipse cx="60" cy="53" rx="8"  ry="12" fill="#2a6aaa" opacity="0.7"/>
+        <ellipse cx="64" cy="50" rx="3"  ry="4"  fill="#fff"   opacity="0.3"/>
+        <path d="M32 95 L10 125 L40 110 Z" fill="#5a7a9a"/>
+        <path d="M88 95 L110 125 L80 110 Z" fill="#5a7a9a"/>
+        <rect x="48" y="120" width="24" height="20" rx="4" fill="#3a5a7a"/>
+        <!-- Smoke (damaged) -->
+        <circle cx="60" cy="148" r="8" fill="#555" opacity="0.5"/>
+        <circle cx="55" cy="155" r="6" fill="#444" opacity="0.4"/>
+        <circle cx="65" cy="152" r="5" fill="#666" opacity="0.3"/>
+        <!-- Damage marks -->
+        <path d="M45 90 L50 100 L42 98" stroke="#333" stroke-width="2" fill="none"/>
+        <path d="M75 80 L70 90"         stroke="#333" stroke-width="2"/>
+        <!-- Battery slot -->
+        <rect id="battery-slot" x="72" y="88" width="14" height="10" rx="2"
+              fill="#2a3a4a" stroke="#4a6a8a" stroke-width="1.5"/>
+      </svg>
+    </div>
+
+    <!-- Astronaut -->
+    <div id="astronaut">
+      <svg viewBox="0 0 55 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="14" y="36" width="27" height="30" rx="8" fill="#dde8f0"/>
+        <circle cx="27" cy="24" r="18" fill="#dde8f0"/>
+        <circle cx="27" cy="24" r="14" fill="#1a3a6a" opacity="0.85"/>
+        <ellipse cx="24" cy="20" rx="5" ry="7" fill="#2a6aee" opacity="0.4"/>
+        <ellipse cx="22" cy="19" rx="2" ry="3" fill="#fff"   opacity="0.2"/>
+        <circle cx="27" cy="24" r="14" fill="none" stroke="#aac0d0" stroke-width="2"/>
+        <rect x="4"  y="36" width="12" height="8" rx="4" fill="#ccd8e8"/>
+        <rect x="39" y="36" width="12" height="8" rx="4" fill="#ccd8e8"/>
+        <rect x="16" y="62" width="10" height="14" rx="4" fill="#ccd8e8"/>
+        <rect x="29" y="62" width="10" height="14" rx="4" fill="#ccd8e8"/>
+        <rect x="14" y="48" width="27" height="4" rx="2" fill="#e04020" opacity="0.8"/>
+      </svg>
+    </div>
+
+    <!-- Battery (collectible) -->
+    <div id="battery" title="¡Toca para recoger la batería!">
+      <svg viewBox="0 0 60 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="8"  y="14" width="44" height="58" rx="6" fill="#1a2a4a"/>
+        <rect x="8"  y="14" width="44" height="58" rx="6" fill="none" stroke="#4ab8ff" stroke-width="2"/>
+        <rect x="20" y="6"  width="20" height="10" rx="3" fill="#2a4a7a"/>
+        <rect x="14" y="28" width="32" height="6"  rx="2" fill="#0a4a2a"/>
+        <rect x="14" y="28" width="28" height="6"  rx="2" fill="#00cc66"/>
+        <rect x="14" y="38" width="32" height="6"  rx="2" fill="#0a4a2a"/>
+        <rect x="14" y="38" width="22" height="6"  rx="2" fill="#00cc66"/>
+        <rect x="14" y="48" width="32" height="6"  rx="2" fill="#0a4a2a"/>
+        <rect x="14" y="48" width="14" height="6"  rx="2" fill="#00cc66"/>
+        <path d="M34 20 L24 38 L30 38 L26 58 L38 35 L32 35 Z" fill="#50e8ff" opacity="0.9"/>
+        <rect x="8" y="14" width="44" height="58" rx="6" fill="none" stroke="#50e8ff" stroke-width="1" opacity="0.4"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HUD ═══════════════════════════════════════════════════ -->
+<div id="hud">
+
+  <!-- Mission info -->
+  <div id="top-bar" class="hud-panel">
+    <div class="world-label">🚀 Mundo 1 · La Misión Espacial</div>
+    <div class="level-label">Nivel 1: Encender el motor</div>
+    <div class="mission-box">
+      <div class="mission-title">Misión · Paso actual:</div>
+      <div class="mission-step" id="current-step">Buscar la batería</div>
+    </div>
+  </div>
+
+  <!-- Timer -->
+  <div id="timer" class="hud-panel">2:00</div>
+
+  <!-- Inventory -->
+  <div id="inventory" class="hud-panel">
+    <div class="inv-label">Inventario</div>
+    <!-- slots injected by inventory.js -->
+  </div>
+
+  <!-- Logic hint -->
+  <div id="logic-hint" class="hud-panel">
+    <div class="hint-label">Ayuda lógica · AND</div>
+    <div class="gate-diagram">
+      <div class="gate-input">
+        <div class="gate-chip" id="chip-battery">🔋</div>
+        <div class="gate-chip" id="chip-launch">🚀</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:center">
+        <div class="connector" id="conn-top"></div>
+        <div class="connector" id="conn-bot"></div>
+      </div>
+      <div class="gate-and">AND</div>
+      <div class="gate-arrow">→</div>
+      <div class="gate-output" id="gate-out">🛸</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ CONTROL PANEL ══════════════════════════════════════════ -->
+<div id="control-panel" class="hidden">
+  <button class="ctrl-btn blink" id="btn-battery"
+          onclick="Level1.pressButton('battery')">
+    <div class="ctrl-icon">🔋</div>
+    <div class="ctrl-label">Estabilizar<br>Batería</div>
+  </button>
+  <button class="ctrl-btn blink" id="btn-launch"
+          onclick="Level1.pressButton('launch')">
+    <div class="ctrl-icon">🚀</div>
+    <div class="ctrl-label">Arranque</div>
+  </button>
+</div>
+
+<!-- ═══ FEEDBACK ═══════════════════════════════════════════════ -->
+<div id="toast"></div>
+
+<div id="step-msg">
+  <div class="msg-icon" id="msg-icon">💡</div>
+  <div class="msg-text" id="msg-text"></div>
+  <div class="msg-sub"  id="msg-sub"></div>
+</div>
+
+<!-- ═══ WIN SCREEN ═════════════════════════════════════════════ -->
+<div id="win-screen">
+  <div style="font-size:60px">🛸✨</div>
+  <div class="win-title">¡NIVEL COMPLETADO!</div>
+  <div class="win-sub">Despegaste la nave espacial</div>
+  <div class="win-logic">
+    <strong>Compuerta AND:</strong><br>
+    🔋 Batería estabilizada: <strong style="color:#7fffb2">VERDADERO</strong><br>
+    🚀 Motor de arranque: <strong style="color:#7fffb2">VERDADERO</strong><br>
+    ───────────────────<br>
+    🛸 Despegue: <strong style="color:#7fffb2">✔ VERDADERO</strong><br><br>
+    <small style="color:#888">
+      Ambas condiciones deben ser verdaderas para que la nave despegue.
+      ¡Eso es una compuerta AND!
+    </small>
+  </div>
+  <button class="next-btn" onclick="Level1.nextLevel()">
+    Nivel 2 → Cruzar el espacio
+  </button>
+</div>
+
+<!-- ═══ LEVEL STYLES (local overrides) ════════════════════════ -->
+<style>
+  .planet {
+    position: absolute;
+    bottom: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 480px;
+    height: 180px;
+    background: radial-gradient(ellipse at 40% 35%,
+      #c0522a 0%, #8b2e0d 50%, #5a1a05 100%);
+    border-radius: 50%;
+    box-shadow:
+      inset -30px -15px 60px rgba(0,0,0,0.6),
+      0 0 80px rgba(180, 80, 30, 0.3);
+    overflow: hidden;
+  }
+
+  .planet::before {
+    content: '';
+    position: absolute;
+    top: 30%; left: 10%;
+    width: 30%; height: 15%;
+    background: rgba(200,100,50,0.4);
+    border-radius: 50%;
+    transform: rotate(-8deg);
+  }
+
+  #spaceship {
+    position: absolute;
+    bottom: calc(20% + 80px);
+    left: 38%;
+    width: 120px;
+    cursor: pointer;
+    filter: drop-shadow(0 0 12px rgba(255,150,50,0.5));
+    transition: filter 0.3s;
+  }
+
+  #spaceship.powered {
+    filter: drop-shadow(0 0 24px rgba(100,200,255,0.9));
+    animation: launch 1.5s ease-in forwards;
+  }
+
+  @keyframes launch {
+    0%   { transform: translateY(0) rotate(-5deg); }
+    30%  { transform: translateY(-20px) rotate(-5deg); }
+    100% { transform: translateY(-400px) rotate(-15deg); opacity: 0; }
+  }
+
+  .ship-svg { width: 100%; }
+
+  #battery {
+    position: absolute;
+    bottom: calc(20% + 60px);
+    right: 22%;
+    width: 60px;
+    cursor: pointer;
+    animation: float 2.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 14px rgba(80,220,255,0.9));
+  }
+
+  #battery:hover { transform: scale(1.15); }
+  #battery.collected { display: none; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-12px); }
+  }
+
+  #astronaut {
+    position: absolute;
+    bottom: calc(20% + 65px);
+    left: 45%;
+    width: 55px;
+    animation: idle 3s ease-in-out infinite;
+  }
+
+  @keyframes idle {
+    0%, 100% { transform: translateY(0) rotate(-1deg); }
+    50%       { transform: translateY(-6px) rotate(1deg); }
+  }
+
+  #scene-container {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+
+<!-- ═══ LEVEL SCRIPT ════════════════════════════════════════════
+     Only level-specific wiring lives here.
+     Generic logic is in the imported system/ui JS files.
+════════════════════════════════════════════════════════════════ -->
+<script>
+const Level1 = (() => {
+
+  // ── Stars background ──────────────────────────────────────
+  function _createStars() {
+    const container = document.getElementById('stars');
+    if (!container) return;
+    for (let i = 0; i < 180; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = Math.random() * 2.5 + 0.5;
+      s.style.cssText = `
+        width:${size}px; height:${size}px;
+        top:${Math.random()*100}%;
+        left:${Math.random()*100}%;
+        --d:${(Math.random()*3+1.5).toFixed(1)}s;
+        animation-delay:${(Math.random()*3).toFixed(1)}s;
+        opacity:${Math.random()*0.5+0.1};
+      `;
+      container.appendChild(s);
+    }
+  }
+
+  // ── Step 1: collect battery ───────────────────────────────
+  function _collectBattery() {
+    if (GameState.get('currentStep') !== 1) return;
+
+    document.getElementById('battery').classList.add('collected');
+    GameState.set('batteryCollected', true);
+    GameState.set('currentStep', 2);
+
+    // Inventory is updated automatically via GameState → Inventory listener
+    Inventory.addItem('battery');
+    LogicHelper.update(false, false); // reset visual
+
+    HUD.showToast('🔋 ¡Batería recogida! Ahora conéctala a la nave.');
+
+    // Make ship clickable for next step
+    const ship = document.getElementById('spaceship');
+    ship.title = 'Conectar batería aquí';
+    ship.addEventListener('click', _connectBattery, { once: true });
+  }
+
+  // ── Step 2: connect battery ───────────────────────────────
+  function _connectBattery() {
+    if (GameState.get('currentStep') !== 2) return;
+
+    // Visual feedback on ship
+    document.getElementById('battery-slot')?.setAttribute('fill', '#00cc66');
+
+    GameState.set('batteryConnected', true);
+    GameState.set('currentStep', 3);
+    Inventory.removeItem('battery'); // battery is now in the ship
+
+    HUD.showToast('⚡ ¡Batería conectada! Activa ambos controles.');
+    HUD.showControlPanel();
+    HUD.showMessage('🕹️',
+      'Presiona AMBOS botones para despegar',
+      'Recuerda: AND = los dos deben activarse',
+      3000);
+  }
+
+  // ── Step 3: button presses (AND gate) ────────────────────
+  function pressButton(type) {
+    if (GameState.get('currentStep') !== 3) return;
+
+    if (type === 'battery') {
+      GameState.set('btnBatteryPressed', true);
+      document.getElementById('btn-battery').classList.add('active');
+      document.getElementById('btn-battery').classList.remove('blink');
+    }
+
+    if (type === 'launch') {
+      GameState.set('btnLaunchPressed', true);
+      document.getElementById('btn-launch').classList.add('active');
+      document.getElementById('btn-launch').classList.remove('blink');
+    }
+
+    const a = GameState.get('btnBatteryPressed');
+    const b = GameState.get('btnLaunchPressed');
+    LogicHelper.update(a, b);
+
+    if (a && b) {
+      _launch();
+    } else {
+      HUD.showToast(type === 'battery'
+        ? '🔋 Batería estabilizada. ¡Ahora presiona Arranque!'
+        : '🚀 Arranque listo. ¡Ahora presiona Batería!');
+    }
+  }
+
+  // ── Launch ────────────────────────────────────────────────
+  function _launch() {
+    Timer.stop();
+    HUD.hideControlPanel();
+
+    document.getElementById('spaceship').classList.add('powered');
+    HUD.showMessage('🛸', '¡DESPEGANDO!',
+      'Compuerta AND: ¡ambas condiciones cumplidas!');
+
+    // Mark level as complete
+    const completed = GameState.get('completedLevels');
+    if (!completed.includes(1)) {
+      GameState.set('completedLevels', [...completed, 1]);
+    }
+
+    setTimeout(() => HUD.showWinScreen(), 2000);
+  }
+
+  // ── Navigation ────────────────────────────────────────────
+  function nextLevel() {
+    GameState.resetLevel();
+    location.hash = '#level2';
+  }
+
+  // ── Init ──────────────────────────────────────────────────
+  function init() {
+    GameState.resetLevel();
+
+    _createStars();
+
+    // Wire up battery click
+    document.getElementById('battery')
+      .addEventListener('click', _collectBattery);
+
+    // Init UI modules
+    HUD.init();
+    Inventory.init();
+    LogicHelper.init();
+
+    // Intro message
+    setTimeout(() => {
+      HUD.showMessage('🔭',
+        'Tu nave está averiada. ¡Encuentra la batería!',
+        'Toca la batería para recogerla →',
+        3500);
+    }, 800);
+  }
+
+  return { init, pressButton, nextLevel };
+})();
+
+// Auto-start when this HTML is injected into the DOM
+Level1.init();
+</script>

@@ -1,0 +1,333 @@
+<!--
+  src/levels/level4-combined.html
+  ─────────────────────────────────────────────────────────────
+  Nivel 4 · Reentrada a la isla de los dragones
+  NIVEL COMPLETAMENTE COMBINACIONAL
+
+  Condición de supervivencia:
+    (Esquivar Montaña OR Esquivar Árbol) AND NOT Zona Peligrosa
+
+  El jugador navega lateralmente esquivando obstáculos.
+  El HUD muestra en tiempo real el estado de las 3 variables
+  y la evaluación de la expresión lógica.
+  ──────────────────────────────────────────────────────────── -->
+
+<div id="ar-viewport">
+  <div id="stars"></div>
+  <div id="scene-container">
+    <!-- Ground / atmosphere -->
+    <div class="atmosphere"></div>
+    <div class="ground"></div>
+    <!-- Obstacle lane -->
+    <div id="obstacle-lane">
+      <div id="ship-player">🛸</div>
+    </div>
+    <!-- Danger zones -->
+    <div id="danger-zones"></div>
+  </div>
+</div>
+
+<div id="hud">
+  <div id="top-bar" class="hud-panel">
+    <div class="world-label">🚀 Mundo 1 · La Misión Espacial</div>
+    <div class="level-label">Nivel 4: Isla de los Dragones</div>
+    <div class="mission-box">
+      <div class="mission-title">Misión · Paso actual:</div>
+      <div class="mission-step" id="current-step">¡Aterriza esquivando obstáculos!</div>
+    </div>
+  </div>
+  <div id="timer" class="hud-panel">2:00</div>
+  <div id="inventory" class="hud-panel"><div class="inv-label">Inventario</div></div>
+
+  <!-- Combined logic diagram -->
+  <div id="logic-hint" class="hud-panel" style="min-width:260px">
+    <div class="hint-label">Lógica combinacional</div>
+    <div style="font-size:11px;color:#cce8ff;line-height:2">
+      <span id="var-mountain" style="color:#888">⛰ Montaña: —</span><br>
+      <span id="var-tree"     style="color:#888">🌲 Árbol:   —</span><br>
+      <span id="var-danger"   style="color:#888">🔥 Peligro: —</span><br>
+      <div style="border-top:1px solid rgba(80,180,255,0.2);margin:4px 0;padding-top:4px">
+        <span id="expr-result" style="color:#888;font-weight:bold">
+          (M OR A) AND NOT P = ?
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div id="control-panel">
+  <button class="ctrl-btn" id="btn-left"
+          onpointerdown="Level4.move('left')" onpointerup="Level4.stopMove()">
+    <div class="ctrl-icon">⬅️</div>
+    <div class="ctrl-label">Esquivar<br>Izquierda</div>
+  </button>
+  <button class="ctrl-btn" id="btn-right"
+          onpointerdown="Level4.move('right')" onpointerup="Level4.stopMove()">
+    <div class="ctrl-icon">➡️</div>
+    <div class="ctrl-label">Esquivar<br>Derecha</div>
+  </button>
+</div>
+
+<div id="toast"></div>
+<div id="step-msg">
+  <div class="msg-icon" id="msg-icon">💡</div>
+  <div class="msg-text" id="msg-text"></div>
+  <div class="msg-sub"  id="msg-sub"></div>
+</div>
+
+<div id="win-screen">
+  <div style="font-size:60px">🐉✨</div>
+  <div class="win-title">¡MUNDO COMPLETADO!</div>
+  <div class="win-sub">¡Aterrizaste en la isla de los dragones!</div>
+  <div class="win-logic">
+    <strong>Lógica combinacional:</strong><br>
+    <code style="font-size:12px">(M OR A) AND NOT P</code><br><br>
+    Esquivaste obstáculos (OR) <em>y</em><br>
+    evitaste zonas peligrosas (NOT),<br>
+    cumpliendo la condición AND. ✅
+  </div>
+  <button class="next-btn" onclick="Level4.finish()">
+    🏠 Volver al inicio
+  </button>
+</div>
+
+<style>
+  #scene-container {
+    position:absolute; inset:0;
+    display:flex; align-items:flex-end; justify-content:center;
+    overflow:hidden;
+  }
+
+  .atmosphere {
+    position:absolute; inset:0;
+    background:linear-gradient(180deg,
+      #000510 0%, #0a1a3a 40%, #1a3a6a 70%, #2a5a2a 100%);
+  }
+
+  .ground {
+    position:absolute; bottom:0; left:0; right:0; height:25%;
+    background:linear-gradient(180deg, #1a4a1a 0%, #0a2a0a 100%);
+    border-top:2px solid #2a6a2a;
+  }
+
+  #obstacle-lane {
+    position:relative; width:100%; height:80%;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  #ship-player {
+    position:absolute;
+    font-size:36px;
+    bottom:30%;
+    left:50%;
+    transform:translateX(-50%);
+    transition:left 0.15s ease;
+    filter:drop-shadow(0 0 12px rgba(100,200,255,0.8));
+    z-index:10;
+  }
+
+  .obstacle {
+    position:absolute;
+    font-size:32px;
+    animation:fall-down 3s linear forwards;
+  }
+
+  @keyframes fall-down {
+    from { top:-60px; }
+    to   { top:110%; }
+  }
+
+  .danger-zone {
+    position:absolute;
+    width:80px; height:80px;
+    background:radial-gradient(circle, rgba(255,80,0,0.4), transparent 70%);
+    border:2px solid rgba(255,80,0,0.6);
+    border-radius:50%;
+    animation:danger-pulse 1s infinite alternate;
+  }
+
+  @keyframes danger-pulse {
+    from { transform:scale(1); opacity:0.6; }
+    to   { transform:scale(1.1); opacity:1; }
+  }
+
+  #control-panel {
+    position:fixed;
+    bottom:0;left:0;right:0;height:160px;
+    background:linear-gradient(180deg,rgba(0,5,20,0) 0%,rgba(0,10,35,0.97) 25%);
+    display:flex;align-items:flex-end;justify-content:center;
+    padding-bottom:20px;gap:40px;z-index:200;
+  }
+</style>
+
+<script>
+const Level4 = (() => {
+
+  let _playerPos = 50; // percentage from left
+  let _moveInterval;
+  let _spawnInterval;
+  let _distance = 0; // 0-100, reaches 100 = win
+  const MOVE_SPEED = 2;
+  const TOTAL_DISTANCE = 100;
+
+  // Logic state
+  let _dodgedObstacle = false;  // mountain OR tree
+  let _inDanger       = false;  // NOT zone
+
+  function move(dir) {
+    stopMove();
+    _moveInterval = setInterval(() => {
+      _playerPos += dir === 'left' ? -MOVE_SPEED : MOVE_SPEED;
+      _playerPos = Math.max(5, Math.min(95, _playerPos));
+      const ship = document.getElementById('ship-player');
+      if (ship) ship.style.left = _playerPos + '%';
+    }, 50);
+  }
+
+  function stopMove() {
+    clearInterval(_moveInterval);
+  }
+
+  function _spawnObstacle() {
+    const lane = document.getElementById('obstacle-lane');
+    if (!lane) return;
+
+    const types = [
+      { emoji:'⛰️', type:'mountain' },
+      { emoji:'🌲', type:'tree' },
+      { emoji:'🪨', type:'rock' },
+    ];
+    const chosen = types[Math.floor(Math.random()*types.length)];
+
+    const el = document.createElement('div');
+    el.className = 'obstacle';
+    el.textContent = chosen.emoji;
+    el.style.left = (10 + Math.random()*80) + '%';
+    lane.appendChild(el);
+
+    // Collision detection at ship height
+    setTimeout(() => {
+      const shipLeft = _playerPos;
+      const obstLeft = parseFloat(el.style.left);
+      const hit = Math.abs(shipLeft - obstLeft) < 10;
+
+      if (!hit) {
+        // Dodged!
+        if (chosen.type === 'mountain' || chosen.type === 'tree') {
+          _dodgedObstacle = true;
+        }
+        HUD.showToast(`✅ ¡${chosen.emoji} esquivado!`);
+      } else {
+        HUD.showToast(`💥 ¡Choque con ${chosen.emoji}! Cuidado.`);
+      }
+
+      _updateLogicDisplay();
+      el.remove();
+    }, 2000);
+  }
+
+  function _spawnDangerZone() {
+    const scene = document.getElementById('scene-container');
+    const el = document.createElement('div');
+    el.className = 'danger-zone';
+    el.style.left = (10 + Math.random()*80) + '%';
+    el.style.top  = (20 + Math.random()*50) + '%';
+    scene.appendChild(el);
+
+    // Check if player is near it
+    const checkId = setInterval(() => {
+      const dangerLeft = parseFloat(el.style.left);
+      _inDanger = Math.abs(_playerPos - dangerLeft) < 12;
+      _updateLogicDisplay();
+    }, 200);
+
+    setTimeout(() => { clearInterval(checkId); el.remove(); _inDanger=false; _updateLogicDisplay(); }, 3000);
+  }
+
+  function _updateLogicDisplay() {
+    const m = _dodgedObstacle;
+    const p = _inDanger;
+    const result = m && !p;
+
+    const col = v => v ? '#7fffb2' : '#ff4444';
+    const str = v => v ? 'VERDADERO' : 'FALSO';
+
+    document.getElementById('var-mountain').innerHTML =
+      `⛰ Esquivó obstáculo: <strong style="color:${col(m)}">${str(m)}</strong>`;
+    document.getElementById('var-danger').innerHTML =
+      `🔥 Zona peligrosa: <strong style="color:${col(p)}">${str(p)}</strong>`;
+    document.getElementById('expr-result').innerHTML =
+      `(OR) AND NOT P = <strong style="color:${col(result)}">${str(result)}</strong>`;
+  }
+
+  function _progressGame() {
+    _distance++;
+    if (_distance >= TOTAL_DISTANCE) {
+      clearInterval(_spawnInterval);
+      Timer.stop();
+      _complete();
+    }
+  }
+
+  function _complete() {
+    const completed = GameState.get('completedLevels');
+    if (!completed.includes(4)) GameState.set('completedLevels', [...completed, 4]);
+    setTimeout(() => HUD.showWinScreen(), 500);
+  }
+
+  function finish() {
+    GameState.resetLevel();
+    location.hash = '#level1';
+  }
+
+  function _createStars() {
+    const c = document.getElementById('stars');
+    if (!c) return;
+    for (let i = 0; i < 120; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = Math.random() * 2 + 0.5;
+      s.style.cssText = `width:${size}px;height:${size}px;
+        top:${Math.random()*50}%;left:${Math.random()*100}%;
+        --d:${(Math.random()*3+1.5).toFixed(1)}s;
+        animation-delay:${(Math.random()*3).toFixed(1)}s;
+        opacity:${Math.random()*0.4+0.1};`;
+      c.appendChild(s);
+    }
+  }
+
+  function init() {
+    GameState.resetLevel();
+    _createStars();
+    HUD.init();
+    Inventory.init();
+    _updateLogicDisplay();
+
+    Timer.start(120,
+      (label, rem) => {
+        const t = document.getElementById('timer');
+        if (t) { t.textContent = label; t.className = rem <= 20 ? 'hud-panel urgent' : 'hud-panel'; }
+      },
+      _complete
+    );
+
+    _spawnInterval = setInterval(() => {
+      _spawnObstacle();
+      _progressGame();
+      if (Math.random() > 0.6) _spawnDangerZone();
+    }, 2000);
+
+    setTimeout(() => {
+      HUD.showMessage('🐉',
+        '¡Aterrizaje de emergencia!',
+        '(Esquivar Montaña OR Árbol) AND NOT Zona Peligrosa',
+        4000);
+    }, 800);
+  }
+
+  return { init, move, stopMove, finish };
+})();
+
+Level4.init();
+</script>
